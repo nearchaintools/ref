@@ -1,0 +1,94 @@
+http:
+  middlewares:
+    https-redirect:
+      redirectScheme:
+        scheme: https
+
+    traefik-auth:
+      basicAuth:
+        users:
+          - admin:$apr1$QWGUDFGE$BHXX5sO/gHZwQA6gU3CSs1    # RSM
+
+  routers:
+    traefik:
+      rule: Host(`traefik.nearchaintools.com`)
+      service: api@internal
+      middlewares:
+        - traefik-auth
+
+    portainer:
+      rule: Host(`portainer.nearchaintools.com`)
+      entryPoints:
+        - web
+      middlewares:
+        - https-redirect
+      service: portainer
+    portainer-secured:
+      rule: Host(`portainer.nearchaintools.com`)
+      entryPoints:
+        - web-secure
+      tls:
+        certResolver: myhttpchallenge
+      service: portainer
+
+    ref:
+      rule: Host(`ref.nearchaintools.com`)
+      entryPoints:
+        - web
+      middlewares:
+        - https-redirect
+      service: ref
+    ref-secured:
+      rule: Host(`ref.nearchaintools.com`)
+      entryPoints:
+        - web-secure
+      tls:
+        certResolver: myhttpchallenge
+      service: ref     
+      
+    prisma:
+      rule: Host(`prisma.nearchaintools.com`)
+      entryPoints:
+        - web
+      middlewares:
+        - https-redirect
+      service: prisma
+    prisma-secured:
+      rule: Host(`prisma.nearchaintools.com`)
+      entryPoints:
+        - web-secure
+      middlewares:
+        - traefik-auth          
+      tls:
+        certResolver: myhttpchallenge
+      service: prisma  
+
+
+  services:
+
+    portainer:
+      loadBalancer:
+        servers:
+          - url: "http://portainer:9000"
+    prisma:
+      loadBalancer:
+        servers:
+          - url: "http://prisma:5555"          
+    ref:
+      loadBalancer:
+        servers:
+          - url: "http://ref_near_web:80"          
+   
+# tcp:
+#   routers:
+#     postgres:
+#       rule: HostSNI(`*`)
+#       entryPoints:
+#         - postgres
+#       service: postgres
+
+#   services:
+#     postgres:
+#       loadBalancer:
+#         servers:
+#           - address: "postgres:5432"

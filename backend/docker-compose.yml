@@ -1,0 +1,55 @@
+version: '3.7'
+services:
+  ref_near:
+    container_name: ref_near
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    restart: always
+    networks:
+      - internal
+      - web
+    expose:
+      - 4000
+    volumes:
+      - '/etc/timezone:/etc/timezone:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+    env_file:
+      - .env.production
+
+  ref_near_cron:
+    container_name: ref_near_cron
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+    restart: always
+    networks:
+      - internal
+      - web
+    volumes:
+      - '/etc/timezone:/etc/timezone:ro'
+      - '/etc/localtime:/etc/localtime:ro'
+    env_file:
+      - .env.production
+    command: node ./dist/standalone
+
+#   postgres:
+#     image: postgres:12
+#     container_name: postgres
+#     restart: always
+#     ports:
+#       - 5432:5432
+#     env_file:
+#       - .env
+#     volumes:
+#       - postgres:/var/lib/postgresql/data
+
+# volumes:
+#   postgres:
+#     name: nest-db
+
+networks:
+  web:
+    external: true
+  internal:
+    external: true

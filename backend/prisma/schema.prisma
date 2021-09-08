@@ -1,0 +1,199 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// generator dbml {
+//   provider = "prisma-dbml-generator"
+// }
+
+enum Role {
+  ADMIN
+  VALIDATOR
+  NOMINATOR
+}
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  email     String   @unique
+  password  String
+  firstname String?
+  lastname  String?
+  role      Role
+}
+
+model Chain {
+  name             String         @id
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  lastGrabbedBlock Int?
+  chainUpdates     ChainUpdates[]
+}
+
+enum ChainUpdateType {
+  LIQUIDITY
+  POOLS
+  TOKENS
+}
+
+model ChainUpdates {
+  id         Int             @id @default(autoincrement())
+  chain      Chain           @relation(fields: [chainName], references: [name])
+  chainName  String
+  type       ChainUpdateType
+  startedAt  DateTime        @default(now())
+  finishedAt DateTime?
+
+  @@unique([chainName, type])
+}
+
+enum PoolKind {
+  SIMPLE_POOL
+}
+
+model Pool {
+  id                  Int                       @id
+  fee                 Decimal
+  totalShares         Decimal
+  tokensArr           String[]
+  tokens              TokenInPool[]
+  simplePoolLiquidity SimplePoolLiquidity[]
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  poolKind            PoolKind
+  amountHistory       SimplePoolAmountHistory[]
+  farm                Farm?
+  tvl                 Decimal?
+}
+
+model Token {
+  id             Int           @id @default(autoincrement())
+  contractId     String        @unique
+  name           String
+  symbol         String
+  decimals       Int
+  icon           String?
+  spec           String?
+  reference      String?
+  referenceHash  String?
+  pools          TokenInPool[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  asRewaredToken Farm[]        @relation(name: "FarmRewardToken")
+
+}
+
+model TokenInPool {
+  id           Int                       @id @default(autoincrement())
+  createdAt    DateTime                  @default(now())
+  token        Token                     @relation(fields: [tokenId], references: [id])
+  tokenId      Int
+  contractId   String
+  symbol       String
+  pool         Pool                      @relation(fields: [poolId], references: [id])
+  poolId       Int
+  decimals     Int
+  amount       Decimal
+  inputVolume  Decimal
+  outputVolume Decimal
+  history      TokenInPoolHistory[]
+  amounts      SimplePoolAmountHistory[]
+
+  @@unique([tokenId, poolId])
+}
+
+model TokenInPoolHistory {
+  createdAt     DateTime    @default(now())
+  tokenInPoolId Int
+  tokenInPool   TokenInPool @relation(fields: [tokenInPoolId], references: [id])
+  amount        Decimal
+  inputVolume   Decimal
+  outputVolume  Decimal
+
+  @@id([createdAt, tokenInPoolId])
+}
+
+model SimplePoolAmountHistory {
+  createdAt     DateTime    @default(now())
+  tokenInPoolId Int
+  tokenInPool   TokenInPool @relation(fields: [tokenInPoolId], references: [id])
+  pool          Pool        @relation(fields: [poolId], references: [id])
+  poolId        Int
+  token1Id      Int
+  token1Amount  Decimal
+  token2Id      Int
+  token2Amount  Decimal
+  swap1to2      Decimal
+  swap2to1      Decimal
+  tvl           Decimal?
+
+  @@id([createdAt, poolId])
+}
+
+enum LiquidityDirection {
+  POOL_IN
+  POOL_OUT
+}
+
+model SimplePoolLiquidity {
+  timestamp      String
+  poolId         Int
+  pool           Pool               @relation(fields: [poolId], references: [id])
+  direction      LiquidityDirection
+  accountAddress String
+  token1Amount   Decimal
+  token2Amount   Decimal
+  removedShares  Decimal?
+
+  @@id([timestamp, poolId, direction, accountAddress])
+}
+
+enum FarmKind {
+  SIMPLE_FARM
+}
+
+model Seed {
+  id         Int     @id
+  seedId     String  @unique
+  type       String
+  nextIndex  Int
+  amount     Decimal
+  minDeposit Decimal
+  farms      Farm[]
+
+}
+
+enum FarmStatus {
+  CREATED
+  RUNNING
+  ENDED
+  CLEARED
+}
+
+model Farm {
+  id               Int        @id
+  farmId           String     @unique
+  farmKind         FarmKind
+  status           FarmStatus
+  seed             Seed       @relation(fields: [seedId], references: [id])
+  seedId           Int
+  rewardToken      Token      @relation(name: "FarmRewardToken", fields: [rewardTokenId], references: [id])
+  simplePool       Pool       @relation(fields: [simplePoolId], references: [id])
+  simplePoolId     Int
+  rewardTokenId    Int
+  startAt          Int
+  rewardPerSession Decimal
+  sessionInterval  Int
+  totalReward      Decimal
+  currentRound     Int
+  lastRound        Int
+  claimedReward    Decimal
+  unclaimedReward  Decimal
+  beneficaryReward Decimal
+}
