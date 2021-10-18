@@ -7,24 +7,24 @@ http:
     traefik-auth:
       basicAuth:
         users:
-          - admin:$apr1$QWGUDFGE$BHXX5sO/gHZwQA6gU3CSs1    # RSM
+          - admin:$apr1$QWGUDFGE$BHXX5sO/gHZwQA6gU3CSs1 # RSM
 
   routers:
     traefik:
-      rule: Host(`traefik.nearchaintools.com`)
+      rule: Host(`traefik.nearchaintools.com`, `traefik.submentor.me`)
       service: api@internal
       middlewares:
         - traefik-auth
 
     portainer:
-      rule: Host(`portainer.nearchaintools.com`)
+      rule: Host(`portainer.nearchaintools.com`, `portainer.submentor.me`)
       entryPoints:
         - web
       middlewares:
         - https-redirect
       service: portainer
     portainer-secured:
-      rule: Host(`portainer.nearchaintools.com`)
+      rule: Host(`portainer.nearchaintools.com`, `portainer.submentor.me`)
       entryPoints:
         - web-secure
       tls:
@@ -44,8 +44,8 @@ http:
         - web-secure
       tls:
         certResolver: myhttpchallenge
-      service: ref     
-      
+      service: ref
+
     prisma:
       rule: Host(`prisma.nearchaintools.com`)
       entryPoints:
@@ -58,14 +58,27 @@ http:
       entryPoints:
         - web-secure
       middlewares:
-        - traefik-auth          
+        - traefik-auth
       tls:
         certResolver: myhttpchallenge
-      service: prisma  
+      service: prisma
 
+    polkadex:
+      rule: Host(`polkadex.submentor.me`)
+      entryPoints:
+        - web
+      middlewares:
+        - https-redirect
+      service: polkadex
+    polkadex-secured:
+      rule: Host(`polkadex.submentor.me`)
+      entryPoints:
+        - web-secure
+      tls:
+        certResolver: myhttpchallenge
+      service: polkadex
 
   services:
-
     portainer:
       loadBalancer:
         servers:
@@ -73,12 +86,15 @@ http:
     prisma:
       loadBalancer:
         servers:
-          - url: "http://prisma:5555"          
+          - url: "http://prisma:5555"
     ref:
       loadBalancer:
         servers:
-          - url: "http://ref_near_web:80"          
-   
+          - url: "http://ref_near_web:80"
+    polkadex:
+      loadBalancer:
+        servers:
+          - url: "http://polkadex_web:8080"
 # tcp:
 #   routers:
 #     postgres:
